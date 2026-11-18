@@ -1,6 +1,6 @@
 # mini-deepagents
 
-A minimal agent harness framework for models with an 8K-token context window. It is a Python package, managed with `uv`, with zero runtime dependencies. Today it runs one chat turn inside a hard token budget. It has no tools and no agent loop yet.
+A minimal agent harness framework for models with an 8K-token context window. It is a Python package, managed with `uv`, with zero runtime dependencies. Today it runs one chat turn inside a hard token budget, with or without native tool calls in a loop.
 
 ## Why this project exists
 
@@ -28,7 +28,9 @@ Read `ARCHITECTURE.md` before you change the structure.
 - Treat `mini_deepagents/__init__.py` as the public API. A removed or renamed export is a breaking change.
 - Use semver. While the version is 0.x, a breaking change bumps the minor version. Apps pin an exact git tag.
 - Give every port a fake in `mini_deepagents.testing`.
-- Add a new bounded context as a sibling package of `chat/`. The next one is `agent/`, for tools.
+- Add a new bounded context as a sibling package of `chat/` and `agent/`. Dependencies point inward: `agent/` uses `chat/`, never the reverse.
+- Count the tool schemas in the budget. `AgentService` reserves `tool_overhead_tokens` plus `ToolSet.prompt_tokens()`. Measure the overhead per provider, as `README.md` describes.
+- Save only the user message and the final reply of an agent turn. Never save the tool steps.
 
 ## Commands
 
