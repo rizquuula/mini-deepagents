@@ -19,6 +19,10 @@ class ModelError(MiniDeepAgentsError):
     """The model call failed or returned no usable reply."""
 
 
+class ToolConfigError(MiniDeepAgentsError):
+    """The tool setup is invalid, such as a duplicate name or no room left."""
+
+
 class ContextOverflowError(MiniDeepAgentsError):
     """The messages to send do not fit the token budget."""
 

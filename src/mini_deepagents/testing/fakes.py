@@ -1,8 +1,8 @@
-"""Fakes for the chat ports, for users who test their code without a real model or store."""
+"""Fakes for the chat and agent ports, for users who test their code without a real model or store."""
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator, Sequence
+from collections.abc import AsyncGenerator, Mapping, Sequence
 from datetime import datetime, timedelta, timezone
 
 from mini_deepagents.chat import (
@@ -68,6 +68,33 @@ class FakeChatModel:
 
     async def aclose(self) -> None:
         self.aclose_calls += 1
+
+
+class FakeTool:
+    """A ``Tool`` that returns a fixed result or raises, and records each call."""
+
+    def __init__(
+        self,
+        name: str,
+        result: str = "ok",
+        *,
+        error: Exception | None = None,
+        parameters: Mapping[str, object] | None = None,
+    ) -> None:
+        self.spec = ToolSpec(
+            name=name,
+            description=f"The fake tool {name}.",
+            parameters=parameters or {"type": "object", "properties": {}},
+        )
+        self.result = result
+        self.error = error
+        self.calls: list[Mapping[str, object]] = []
+
+    async def run(self, arguments: Mapping[str, object]) -> str:
+        self.calls.append(arguments)
+        if self.error is not None:
+            raise self.error
+        return self.result
 
 
 class InMemoryChatRepository:
