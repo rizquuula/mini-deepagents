@@ -12,6 +12,9 @@ from mini_deepagents.chat.domain import (
     Session,
     StreamEnd,
     TextDelta,
+    ToolCall,
+    ToolCallRequested,
+    ToolSpec,
     Usage,
 )
 from mini_deepagents.chat.ports import ChatModel, ChatRepository, TokenEstimator
@@ -32,6 +35,9 @@ __all__ = [
     "StreamEnd",
     "TextDelta",
     "TokenEstimator",
+    "ToolCall",
+    "ToolCallRequested",
+    "ToolSpec",
     "Usage",
     "fit_messages",
 ]

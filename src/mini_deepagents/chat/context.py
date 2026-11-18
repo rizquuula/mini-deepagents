@@ -8,10 +8,11 @@ request at or below the model's real context limit without a tokenizer.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from typing import Final
 
-from mini_deepagents.chat.domain import Message
+from mini_deepagents.chat.domain import Message, ToolSpec
 from mini_deepagents.chat.ports import TokenEstimator
 from mini_deepagents.errors import ContextOverflowError
 
@@ -31,9 +32,35 @@ class ByteTokenEstimator:
     """Estimate tokens from the UTF-8 byte count. Implements ``TokenEstimator``."""
 
     def estimate(self, message: Message) -> int:
-        """Return ceil(bytes / BYTES_PER_TOKEN) plus the per-message overhead."""
-        byte_count = len(message.content.encode("utf-8"))
-        return -(-byte_count // BYTES_PER_TOKEN) + MESSAGE_OVERHEAD_TOKENS
+        """Return ceil(bytes / BYTES_PER_TOKEN) plus the per-message overhead.
+
+        The bytes are the content, the id, name, and arguments of each tool
+        call, and the ``tool_call_id``.
+        """
+        parts = [message.content, message.tool_call_id or ""]
+        for call in message.tool_calls:
+            parts.extend((call.id, call.name, call.arguments))
+        return _tokens_for("".join(parts)) + MESSAGE_OVERHEAD_TOKENS
+
+    def estimate_tool(self, spec: ToolSpec) -> int:
+        """Return the estimate of the OpenAI tool object as compact JSON.
+
+        The provider's fixed overhead for sending any tools is not included.
+        """
+        tool_object = {
+            "type": "function",
+            "function": {
+                "name": spec.name,
+                "description": spec.description,
+                "parameters": spec.parameters,
+            },
+        }
+        text = json.dumps(tool_object, separators=(",", ":"), ensure_ascii=False)
+        return _tokens_for(text) + MESSAGE_OVERHEAD_TOKENS
+
+
+def _tokens_for(text: str) -> int:
+    return -(-len(text.encode("utf-8")) // BYTES_PER_TOKEN)
 
 
 def fit_messages(

@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
-from mini_deepagents import ByteTokenEstimator, ContextOverflowError, Message, fit_messages
+from mini_deepagents import (
+    ByteTokenEstimator,
+    ContextOverflowError,
+    Message,
+    ToolCall,
+    ToolSpec,
+    fit_messages,
+)
 
 ESTIMATOR = ByteTokenEstimator()
 
@@ -86,3 +95,52 @@ def test_fit_does_not_mutate_the_input() -> None:
     fit_messages(messages, 14, ESTIMATOR)
 
     assert messages == CONVERSATION
+
+
+@pytest.mark.parametrize(
+    "calls",
+    [
+        (ToolCall(id="call_1", name="get_time", arguments="{}"),),
+        (
+            ToolCall(id="call_1", name="add", arguments='{"a": 1, "b": 2}'),
+            ToolCall(id="call_2", name="add", arguments='{"a": 3, "b": 4}'),
+        ),
+    ],
+)
+def test_tool_calls_cost_at_least_their_bytes_over_three_more(
+    calls: tuple[ToolCall, ...],
+) -> None:
+    plain = assistant("let me check")
+    with_calls = Message(role="assistant", content="let me check", tool_calls=calls)
+
+    extra_bytes = sum(len(f"{c.id}{c.name}{c.arguments}") for c in calls)
+    assert ESTIMATOR.estimate(with_calls) >= ESTIMATOR.estimate(plain) + extra_bytes / 3
+
+
+def test_tool_result_costs_more_than_the_same_content_without_a_call_id() -> None:
+    result = Message(role="tool", content="42", tool_call_id="call_" + "x" * 30)
+
+    assert ESTIMATOR.estimate(result) > ESTIMATOR.estimate(Message(role="tool", content="42"))
+
+
+def test_estimate_tool_is_at_least_the_ceiling_of_json_bytes_over_three() -> None:
+    spec = ToolSpec(
+        name="get_weather",
+        description="Return the weather for a city.",
+        parameters={
+            "type": "object",
+            "properties": {"city": {"type": "string", "description": "City name"}},
+            "required": ["city"],
+        },
+    )
+    tool_object = {
+        "type": "function",
+        "function": {
+            "name": spec.name,
+            "description": spec.description,
+            "parameters": spec.parameters,
+        },
+    }
+    json_bytes = len(json.dumps(tool_object, separators=(",", ":")).encode("utf-8"))
+
+    assert ESTIMATOR.estimate_tool(spec) >= -(-json_bytes // 3)

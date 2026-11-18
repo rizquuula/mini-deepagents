@@ -5,7 +5,15 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator, Sequence
 from datetime import datetime, timedelta, timezone
 
-from mini_deepagents.chat import Message, ModelEvent, Session, StreamEnd, TextDelta, Usage
+from mini_deepagents.chat import (
+    Message,
+    ModelEvent,
+    Session,
+    StreamEnd,
+    TextDelta,
+    ToolSpec,
+    Usage,
+)
 from mini_deepagents.errors import ModelError, SessionNotFoundError
 
 _EPOCH = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -27,13 +35,20 @@ class FakeChatModel:
         self.error = error
         self.fail_after = fail_after
         self.calls: list[tuple[list[Message], int, str]] = []
+        self.tools_per_call: list[tuple[ToolSpec, ...]] = []
         self.closed_early = False
         self.aclose_calls = 0
 
     async def stream(
-        self, messages: Sequence[Message], *, max_tokens: int, session_key: str
+        self,
+        messages: Sequence[Message],
+        *,
+        max_tokens: int,
+        session_key: str,
+        tools: Sequence[ToolSpec] = (),
     ) -> AsyncGenerator[ModelEvent, None]:
         self.calls.append((list(messages), max_tokens, session_key))
+        self.tools_per_call.append(tuple(tools))
         finished = False
         try:
             for index, text in enumerate(self.deltas):
