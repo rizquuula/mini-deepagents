@@ -1,7 +1,7 @@
 """The error hierarchy of the framework.
 
 Adapters translate vendor errors into these types, so no vendor exception
-reaches the domain or the HTTP layer.
+reaches the domain or the app that calls it.
 """
 
 from __future__ import annotations

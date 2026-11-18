@@ -1,7 +1,7 @@
 """The chat service: one chat turn, from the token budget to the saved exchange.
 
 The service is pure domain code. It imports no framework and logs nothing.
-The HTTP adapter logs from the data that the service returns.
+The calling app logs from the data that the service returns.
 """
 
 from __future__ import annotations
