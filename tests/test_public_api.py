@@ -3,6 +3,8 @@ from __future__ import annotations
 import mini_deepagents
 
 EXPECTED_EXPORTS = {
+    "AgentEvent",
+    "AgentService",
     "ByteTokenEstimator",
     "ChatEvent",
     "ChatModel",
@@ -25,8 +27,10 @@ EXPECTED_EXPORTS = {
     "ToolCall",
     "ToolCallRequested",
     "ToolConfigError",
+    "ToolFinished",
     "ToolSet",
     "ToolSpec",
+    "ToolStarted",
     "Usage",
     "__version__",
     "fit_messages",

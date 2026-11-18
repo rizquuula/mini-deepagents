@@ -1,4 +1,4 @@
-"""Fakes for the chat and agent ports, for users who test their code without a real model or store."""
+"""Fakes for the chat and agent ports, to test code without a real model, store, or tool."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ from mini_deepagents.chat import (
     Session,
     StreamEnd,
     TextDelta,
+    ToolCall,
+    ToolCallRequested,
     ToolSpec,
     Usage,
 )
@@ -20,7 +22,14 @@ _EPOCH = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
 
 class FakeChatModel:
-    """A ``ChatModel`` that streams fixed deltas and records each call."""
+    """A ``ChatModel`` that streams fixed events and records each call.
+
+    Without ``steps``, every call streams ``deltas``. With ``steps``, call N
+    plays ``steps[N]``: a ``str`` yields ``TextDelta`` and a ``ToolCall``
+    yields ``ToolCallRequested``. ``error`` and ``fail_after`` apply to every
+    call. ``calls`` records the messages, max tokens, and session key of each
+    call. ``tools_per_call`` records the tools of each call.
+    """
 
     def __init__(
         self,
@@ -29,11 +38,13 @@ class FakeChatModel:
         usage: Usage = Usage(10, 2, 12),
         error: Exception | None = None,
         fail_after: int = 0,
+        steps: Sequence[Sequence[str | ToolCall]] | None = None,
     ) -> None:
         self.deltas = tuple(deltas)
         self.usage = usage
         self.error = error
         self.fail_after = fail_after
+        self.steps = None if steps is None else tuple(tuple(step) for step in steps)
         self.calls: list[tuple[list[Message], int, str]] = []
         self.tools_per_call: list[tuple[ToolSpec, ...]] = []
         self.closed_early = False
@@ -47,17 +58,18 @@ class FakeChatModel:
         session_key: str,
         tools: Sequence[ToolSpec] = (),
     ) -> AsyncGenerator[ModelEvent, None]:
+        items = self._items_for_call(len(self.calls))
         self.calls.append((list(messages), max_tokens, session_key))
         self.tools_per_call.append(tuple(tools))
         finished = False
         try:
-            for index, text in enumerate(self.deltas):
+            for index, item in enumerate(items):
                 if self.error is not None and index == self.fail_after:
                     raise self.error
-                yield TextDelta(text)
+                yield TextDelta(item) if isinstance(item, str) else ToolCallRequested(item)
             if self.error is not None:
                 raise self.error
-            if not self.deltas:
+            if not items:
                 raise ModelError("empty reply")
             finished = True
             yield StreamEnd(self.usage)
@@ -68,6 +80,13 @@ class FakeChatModel:
 
     async def aclose(self) -> None:
         self.aclose_calls += 1
+
+    def _items_for_call(self, index: int) -> tuple[str | ToolCall, ...]:
+        if self.steps is None:
+            return self.deltas
+        if index >= len(self.steps):
+            raise ModelError(f"no scripted step for call {index + 1}")
+        return self.steps[index]
 
 
 class FakeTool:

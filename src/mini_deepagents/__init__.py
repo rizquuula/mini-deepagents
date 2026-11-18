@@ -5,7 +5,14 @@ This module is the public API. A removed or renamed export is a breaking change.
 
 from __future__ import annotations
 
-from mini_deepagents.agent import Tool, ToolSet
+from mini_deepagents.agent import (
+    AgentEvent,
+    AgentService,
+    Tool,
+    ToolFinished,
+    ToolSet,
+    ToolStarted,
+)
 from mini_deepagents.chat import (
     ByteTokenEstimator,
     ChatEvent,
@@ -38,6 +45,8 @@ from mini_deepagents.errors import (
 __version__ = "0.1.0"
 
 __all__ = [
+    "AgentEvent",
+    "AgentService",
     "ByteTokenEstimator",
     "ChatEvent",
     "ChatModel",
@@ -60,8 +69,10 @@ __all__ = [
     "ToolCall",
     "ToolCallRequested",
     "ToolConfigError",
+    "ToolFinished",
     "ToolSet",
     "ToolSpec",
+    "ToolStarted",
     "Usage",
     "__version__",
     "fit_messages",
