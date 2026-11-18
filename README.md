@@ -111,3 +111,7 @@ Requirements: [uv](https://docs.astral.sh/uv/) and `make`.
 |---|---|
 | `make` | Lists the targets. |
 | `make test` | Runs the test suite with pytest. |
+
+## License
+
+MIT. See `LICENSE`.
